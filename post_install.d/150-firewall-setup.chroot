@@ -1,0 +1,30 @@
+#!/bin/sh
+
+set -e
+set -u
+
+ENABLE_FIREWALL=true
+SECURE_ADS_ONLY=false
+
+if [ "${ENABLE_FIREWALL}" = "true" ]; then
+    echo "[150-firewall-setup] INFO: Enabling firewall"
+    sysrc pf_enable="YES"
+else
+    echo "[150-firewall-setup] INFO: Disabling firewall"
+    sysrc pf_enable="NO"
+fi
+
+if [ "${SECURE_ADS_ONLY}" = "false" ]; then
+    echo "[150-firewall-setup] INFO: Adding unencrypted ADS communication port to firewall rules"
+cat <<EOF >> /etc/pf.conf
+
+# Allow unencrypted ADS communication
+pass in quick proto tcp to port 48898 synproxy state
+EOF
+fi
+
+cat <<'EOF' >> /etc/pf.conf
+
+# Add your custom firewall rules below this line:
+
+EOF
