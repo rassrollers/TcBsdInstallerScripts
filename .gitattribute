@@ -1,0 +1,2 @@
+# Change end of line to LF for all files recursively
+/** text eol=lf

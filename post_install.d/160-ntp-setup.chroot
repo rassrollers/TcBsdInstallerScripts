@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -e
+set -u
+
+# Change NTP server (e.g., ntp.beckhoff-cloud.com or an IP address of a local NTP server)
+NTP_SERVER="ntp.beckhoff-cloud.com"
+
+# Update ntp.conf
+echo "[160-ntp-setup] INFO: Setting up ntp.conf to use custom NTP server: ${NTP_SERVER}"
+sed -i '' "s|^pool ntp\.beckhoff-cloud\.com.*|pool ${NTP_SERVER} iburst minpoll 11 maxpoll 12|" /etc/ntp.conf

@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -e
+set -u
+
+# Change the default keyboard layout to a custom one (e.g., us, de, fr, etc.)
+# Availables keyboard layouts can be found in: /usr/share/vt/keymaps/
+KEYBOARD_LAYOUT="de"
+
+# Update rc.conf
+echo "[180-keyboard-layout] INFO: Setting up keyboard layout in rc.conf to: ${KEYBOARD_LAYOUT}"
+sysrc keymap="${KEYBOARD_LAYOUT}"

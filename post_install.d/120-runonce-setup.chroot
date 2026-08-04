@@ -1,0 +1,44 @@
+#!/bin/sh
+set -e
+set -u
+
+echo "[120-runonce-setup] INFO: Make the runonce script executable"
+
+if [ ! -d "/var/runonce" ]; then
+    echo "[120-runonce-setup] ERROR: Directory /var/runonce does not exist. Nothing to do."
+    exit 1
+fi
+
+# Files are copied to /var/runonce by the installer in 110
+found=false
+for file in "/var/runonce"/*.sh; do
+    # If glob didn't match, skip
+    [ -e "$file" ] || continue
+
+    if [ -f "$file" ]; then
+        echo "[120-runonce-setup] INFO: Making executable: $file"
+        if chmod +x "$file"; then
+            found=true
+        else
+            echo "[120-runonce-setup] ERROR: Failed to make $file executable"
+            exit 1
+        fi
+    fi
+done
+
+# Move the stage 2 script to a new directory
+echo "[120-runonce-setup] INFO: Moving stage 2 script to /var/runonce-stage2/"
+mkdir -p /var/runonce-stage2/
+if [ -f /var/runonce/900-create-factoryreset.sh ]; then
+    mv /var/runonce/900-create-factoryreset.sh /var/runonce-stage2/
+    chmod +x /var/runonce-stage2/900-create-factoryreset.sh
+else
+    echo "[120-runonce-setup] WARNING: 900-create-factoryreset.sh not found in /var/runonce"
+    exit 1
+fi
+
+if [ "$found" = false ]; then
+    echo "[120-runonce-setup] INFO: No .sh files found to make executable."
+fi
+
+echo "[120-runonce-setup] INFO: Runonce script setup complete."

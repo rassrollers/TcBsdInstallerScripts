@@ -1,0 +1,21 @@
+#!/bin/sh
+
+set -e
+set -u
+
+echo "[130-copy-packages] INFO: Copy packages to system to tmp directory"
+# First argument is the root of the new system
+ZPOOL_ALTROOT="${1}"
+
+# Path to your packages on the USB
+PKG_DIR="/backup/INSTALLER/packages"
+# Check that the package directory exists
+if [ ! -d "${PKG_DIR}" ]; then
+    echo "[130-copy-packages] ERROR: Package directory ${PKG_DIR} not found!"
+    exit 1
+else
+    for pkgfile in "${PKG_DIR}"/*.pkg; do
+        echo "[130-copy-packages] INFO: Copying package ${pkgfile} to /tmp directory"
+        cp "${pkgfile}" "${ZPOOL_ALTROOT}/tmp/"
+    done
+fi

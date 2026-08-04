@@ -1,0 +1,48 @@
+#!/bin/sh
+
+set -e
+set -u
+
+# The Ethernet interfaces igb0 and igb1 are the name of the PCIe network adapters.
+# Depending on the IPC they may be named differently. You can check the interface names using the `ifconfig` command.
+# Static IP and subnet mask for igb0
+IGB0=true
+IP_ADDRESS0=192.168.1.10
+SUBNET_MASK0=255.255.255.0
+# Static IP and subnet mask for igb1
+IGB1=false
+IP_ADDRESS1=192.168.2.10
+SUBNET_MASK1=255.255.255.0
+# Set to true to enable IP forwarding (routing between interfaces)
+GATEWAY_ENABLED=false
+
+echo "[140-network-setup] INFO: Configuring network interfaces"
+DENY_INTERFACES=""
+if [ "${IGB0}" = "true" ]; then
+    echo "[140-network-setup] DEBUG: Configuring igb0 with IP ${IP_ADDRESS0} and subnet mask ${SUBNET_MASK0}"
+    sysrc ifconfig_igb0="inet ${IP_ADDRESS0} netmask ${SUBNET_MASK0}"
+    DENY_INTERFACES="igb0"
+fi
+if [ "${IGB1}" = "true" ]; then
+    echo "[140-network-setup] DEBUG: Configuring igb1 with IP ${IP_ADDRESS1} and subnet mask ${SUBNET_MASK1}"
+    sysrc ifconfig_igb1="inet ${IP_ADDRESS1} netmask ${SUBNET_MASK1}"
+    if [ -n "${DENY_INTERFACES}" ]; then
+        DENY_INTERFACES="${DENY_INTERFACES} igb1"
+    else
+        DENY_INTERFACES="igb1"
+    fi
+fi
+if [ -n "${DENY_INTERFACES}" ]; then
+    DHCPCD_FLAGS="--clientid --hostname --waitip --denyinterfaces ${DENY_INTERFACES}"
+else
+    DHCPCD_FLAGS="--clientid --hostname --waitip"
+fi
+echo "[140-network-setup] DEBUG: Setting dhcpcd flags in rc.conf: ${DHCPCD_FLAGS}"
+sysrc dhcpcd_flags="${DHCPCD_FLAGS}"
+
+if [ "${GATEWAY_ENABLED}" = "true" ]; then
+    echo "[140-network-setup] DEBUG: Enabling IP forwarding"
+    sysrc gateway_enable="YES"
+fi
+
+echo "[140-network-setup] INFO: Network configuration complete"
