@@ -10,8 +10,19 @@ if [ ! -f "/usr/local/etc/nginx/IPCDiagnostics.conf.bak" ]; then
     echo "[830-nginx-config] DEBUG: Backup of IPCDiagnostics.conf created at /usr/local/etc/nginx/IPCDiagnostics.conf.bak"
 fi
 
-# Use a here-document to replace nginx.conf with modified config
-cat > "/usr/local/etc/nginx/IPCDiagnostics.conf" <<'EOF'
+# Detect the MDP web server socket path from Beckhoff's shipped config, as it differs between TwinCAT/BSD versions
+# (older: /tmp/MDPWEB0, newer: /var/run/MDPWebServer/web0)
+MDP_SOCKET=$(grep -o 'proxy_pass[[:space:]]*http://unix:[^;]*MDP[^;]*' "/usr/local/etc/nginx/IPCDiagnostics.conf.bak" | head -n 1 | sed 's|.*http://unix:||')
+if [ -z "$MDP_SOCKET" ]; then
+    MDP_SOCKET="/var/run/MDPWebServer/web0"
+    echo "[820-nginx-config] WARN: Could not detect MDP web server socket in IPCDiagnostics.conf.bak, defaulting to $MDP_SOCKET"
+else
+    echo "[820-nginx-config] INFO: Detected MDP web server socket: $MDP_SOCKET"
+fi
+
+# Use a here-document to replace nginx.conf with modified config.
+# The here-document is quoted so nginx variables stay literal; only the __MDP_SOCKET__ placeholder is substituted.
+sed "s|__MDP_SOCKET__|$MDP_SOCKET|" > "/usr/local/etc/nginx/IPCDiagnostics.conf" <<'EOF'
 #user  nobody;
 worker_processes  1;
 
@@ -91,7 +102,7 @@ http {
             include errorpages.conf;
             include auth.conf;
             include proxy.conf;
-            proxy_pass http://unix:/tmp/MDPWEB0;
+            proxy_pass http://unix:__MDP_SOCKET__;
         }
 
         location /console/ {
