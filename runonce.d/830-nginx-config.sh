@@ -91,7 +91,7 @@ http {
             include errorpages.conf;
             include auth.conf;
             include proxy.conf;
-            proxy_pass http://unix:/tmp/MDPWEB0;
+            proxy_pass http://unix:/var/run/MDPWebServer/web0;
         }
 
         location /console/ {
