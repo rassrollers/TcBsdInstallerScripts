@@ -3,27 +3,50 @@
 # This example configures Nginx to serve the PLC HMI Web on HTTP and redirect all other requests to HTTPS.
 # NOTE: From TC/BSD version 15 the Nginx configuration has changed and this script does NOT work.
 
+set -e
+set -u
+
+NGINX_CONFIG="/usr/local/etc/nginx/IPCDiagnostics.conf"
+NGINX_BACKUP="${NGINX_CONFIG}.bak"
+TMP_CONFIG=""
+
+cleanup() {
+    if [ -n "${TMP_CONFIG}" ] && [ -e "${TMP_CONFIG}" ]; then
+        rm -f "${TMP_CONFIG}"
+    fi
+}
+
+trap cleanup 0
+trap 'exit 1' 1 2 15
+
 echo "[830-nginx-config] INFO: Updating Nginx configuration to HTTP for PLC HMI Web and HTTPS for TwinCAT 3.1"
 
+if [ ! -f "${NGINX_CONFIG}" ]; then
+    echo "[830-nginx-config] ERROR: Nginx configuration not found: ${NGINX_CONFIG}"
+    exit 1
+fi
+
 # Check if backup exists, if not, create it
-if [ ! -f "/usr/local/etc/nginx/IPCDiagnostics.conf.bak" ]; then
-    cp "/usr/local/etc/nginx/IPCDiagnostics.conf" "/usr/local/etc/nginx/IPCDiagnostics.conf.bak"
-    echo "[830-nginx-config] DEBUG: Backup of IPCDiagnostics.conf created at /usr/local/etc/nginx/IPCDiagnostics.conf.bak"
+if [ ! -f "${NGINX_BACKUP}" ]; then
+    cp -p "${NGINX_CONFIG}" "${NGINX_BACKUP}"
+    echo "[830-nginx-config] DEBUG: Backup of IPCDiagnostics.conf created at ${NGINX_BACKUP}"
 fi
 
 # Detect the MDP web server socket path from Beckhoff's shipped config, as it differs between TwinCAT/BSD versions
 # (older: /tmp/MDPWEB0, newer: /var/run/MDPWebServer/web0)
-MDP_SOCKET=$(grep -o 'proxy_pass[[:space:]]*http://unix:[^;]*MDP[^;]*' "/usr/local/etc/nginx/IPCDiagnostics.conf.bak" | head -n 1 | sed 's|.*http://unix:||')
+MDP_SOCKET=$(grep -o 'proxy_pass[[:space:]]*http://unix:[^;]*MDP[^;]*' "${NGINX_BACKUP}" | head -n 1 | sed 's|.*http://unix:||')
 if [ -z "$MDP_SOCKET" ]; then
     MDP_SOCKET="/var/run/MDPWebServer/web0"
-    echo "[820-nginx-config] WARN: Could not detect MDP web server socket in IPCDiagnostics.conf.bak, defaulting to $MDP_SOCKET"
+    echo "[830-nginx-config] WARN: Could not detect MDP web server socket in IPCDiagnostics.conf.bak, defaulting to $MDP_SOCKET"
 else
-    echo "[820-nginx-config] INFO: Detected MDP web server socket: $MDP_SOCKET"
+    echo "[830-nginx-config] INFO: Detected MDP web server socket: $MDP_SOCKET"
 fi
 
-# Use a here-document to replace nginx.conf with modified config.
+# Use a here-document to build a replacement for IPCDiagnostics.conf.
 # The here-document is quoted so nginx variables stay literal; only the __MDP_SOCKET__ placeholder is substituted.
-sed "s|__MDP_SOCKET__|$MDP_SOCKET|" > "/usr/local/etc/nginx/IPCDiagnostics.conf" <<'EOF'
+TMP_CONFIG=$(mktemp "${NGINX_CONFIG}.tmp.XXXXXX")
+cp -p "${NGINX_CONFIG}" "${TMP_CONFIG}"
+sed "s|__MDP_SOCKET__|$MDP_SOCKET|" > "${TMP_CONFIG}" <<'EOF'
 #user  nobody;
 worker_processes  1;
 
@@ -129,5 +152,13 @@ http {
     }
 }
 EOF
+
+if ! nginx -t -c "${TMP_CONFIG}"; then
+    echo "[830-nginx-config] ERROR: Generated Nginx configuration is invalid; leaving the current configuration unchanged"
+    exit 1
+fi
+
+mv "${TMP_CONFIG}" "${NGINX_CONFIG}"
+TMP_CONFIG=""
 
 echo "[830-nginx-config] INFO: Updating Nginx configuration done"

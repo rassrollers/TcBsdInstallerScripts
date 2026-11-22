@@ -12,13 +12,14 @@ else
 fi
 
 echo "[820-install-packages] INFO: Install packages"
-pkgs=$(ls /tmp/*.pkg 2>/dev/null)
-if [ -n "$pkgs" ]; then
+set -- /tmp/*.pkg
+if [ -e "$1" ]; then
     echo "[820-install-packages] DEBUG: Installing packages from /tmp..."
-    if pkg add $pkgs; then
+    if pkg add "$@"; then
         echo "[820-install-packages] INFO: Successfully installed all packages"
     else
         echo "[820-install-packages] ERROR: One or more packages failed to install"
+        exit 1
     fi
 else
     echo "[820-install-packages] INFO: No packages to install in /tmp"
