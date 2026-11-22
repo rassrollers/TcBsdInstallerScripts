@@ -3,9 +3,36 @@
 set -e
 set -u
 
-# Change NTP server (e.g., ntp.beckhoff-cloud.com or an IP address of a local NTP server)
+# NTP configuration
 NTP_SERVER="ntp.beckhoff-cloud.com"
+NTP_BASEDATE="2000-01-01"
 
 # Update ntp.conf
-echo "[160-ntp-setup] INFO: Setting up ntp.conf to use custom NTP server: ${NTP_SERVER}"
-sed -i '' "s|^pool ntp\.beckhoff-cloud\.com.*|pool ${NTP_SERVER} iburst minpoll 11 maxpoll 12|" /etc/ntp.conf
+echo "[160-ntp-setup] INFO: Configuring NTP server: ${NTP_SERVER}"
+
+if [ ! -f /etc/ntp.conf ]; then
+    echo "[160-ntp-setup] ERROR: /etc/ntp.conf not found"
+    exit 1
+fi
+
+# Replace the existing pool configuration
+sed -i '' -E \
+    "s|^[[:space:]]*pool[[:space:]].*|pool ${NTP_SERVER} iburst minpoll 11 maxpoll 12|" \
+    /etc/ntp.conf
+
+# Configure NTP era basedate.
+# Remove any existing basedate setting before adding the new one.
+if grep -qE '^[[:space:]]*tos[[:space:]]' /etc/ntp.conf; then
+    sed -i '' -E \
+        '/^[[:space:]]*tos[[:space:]]/ {
+            s/[[:space:]]+basedate[[:space:]]+[^[:space:]]+//g
+            s/[[:space:]]*$/ basedate '"${NTP_BASEDATE}"'/
+        }' \
+        /etc/ntp.conf
+else
+    echo "tos minclock 3 maxclock 6 basedate ${NTP_BASEDATE}" >> /etc/ntp.conf
+fi
+
+echo "[160-ntp-setup] INFO: NTP configuration updated"
+echo "[160-ntp-setup] DEBUG: Server: ${NTP_SERVER}"
+echo "[160-ntp-setup] DEBUG: Basedate: ${NTP_BASEDATE}"
