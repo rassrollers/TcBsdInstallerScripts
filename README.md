@@ -76,6 +76,9 @@ The scripts logs into: `/var/log/messages`
 
 † `820-install-packages.sh` and `130-copy-packages.installer` depend on each other — include both or neither.
 
+> [!WARNING]
+> From TC/BSD version 15 the NGINX configuration has changed, so `830-nginx-config.sh` does **not** work on TC/BSD 15 and newer. Do not include it when installing TC/BSD 15 or newer.
+
 ## Script numbering
 
 The built-in TC/BSD installer scripts occupy numbers below `120`. Custom scripts should start at `120` or higher to avoid conflicts. The `900` range is reserved for the factory reset restore point created by the installer.

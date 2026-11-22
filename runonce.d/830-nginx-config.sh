@@ -1,6 +1,7 @@
 #!/bin/sh
 # Purpose: Modify default Nginx config to custom configuration.
 # This example configures Nginx to serve the PLC HMI Web on HTTP and redirect all other requests to HTTPS.
+# NOTE: From TC/BSD version 15 the Nginx configuration has changed and this script does NOT work.
 
 echo "[830-nginx-config] INFO: Updating Nginx configuration to HTTP for PLC HMI Web and HTTPS for TwinCAT 3.1"
 
